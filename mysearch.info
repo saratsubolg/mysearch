@@ -1,0 +1,13 @@
+name = My custom search
+description = Search all nodes in a database.
+package = Custom search
+core = 7.x
+dependencies[] = search
+dependencies[] = node
+stylesheets[all][] = mysearch.css
+
+; Information added by a Drupal developer Taras Sulyatytskyy on 2014-04-26
+version = "7.27"
+project = "mysearch"
+datestamp = "1398538973"
+

@@ -1,0 +1,197 @@
+<?php
+
+
+/**
+ * Implementation of hook_permission().
+ */
+function mysearch_permission() {
+  return array(
+    'access mysearch' => array(
+        'title' => 'Access MySearch',
+        'description' => 'Allows a user to access MySearch results',
+      )
+    );
+}
+
+
+/**
+ * Implements hook_theme().
+ */
+function mysearch_theme() {
+  return array(
+    'mysearch_result' => array(
+      'variables' => array('result' => NULL),
+    ),
+    'mysearch_results' => array(
+      'variables' => array('results' => NULL),
+    ),
+  );
+}
+
+
+/**
+ * Implementation of hook_menu().
+ */
+function mysearch_menu() {
+  $items['mysearch'] = array(
+    'title' => 'My Search',
+	'page callback' => 'mysearch_view',
+	'access callback' => 'mysearch_node_access',
+	'type' => MENU_SUGGESTED_ITEM,
+	'weight' => -10,
+  );
+  return $items;
+}
+
+
+/**
+ * Access callback for node search.
+ */
+function mysearch_node_access() {
+  return user_access('access mysearch');
+}
+
+
+/**
+ * Menu callback; Outputs search form and/or search results.
+ *
+ * @param $word
+ *   Word to search for.
+ */
+function mysearch_view($word = '') {
+  $word = trim($word);  
+  $module = 'node';
+
+  // Default results output is an empty string.
+  $results = array('#markup' => '');
+
+  if (empty($_POST['form_id']) || $_POST['form_id'] != 'mysearch_form') {
+    // Only search if there are search word.
+    if ($word) {
+      // Log mysearch word.
+      watchdog('mysearch', 'Searched %type for %word.', array('%word' => $word, '%type' => $module), WATCHDOG_NOTICE, l(t('mysearchresults'), 'mysearch/' . $word));
+      // Gathering the mysearch results.
+      $results = mysearch_data($word, $module);
+    }
+  }
+  $build['search_form'] = drupal_get_form('mysearch_form', $word);
+  $build['search_results'] = $results;
+
+  return $build;
+}
+
+
+/**
+ * Performs a search by calling hook_search_execute().
+ *
+ * @param $word
+ *   Word to search for.
+ * @param $module
+ *   Search module to search.
+ *
+ * @return
+ *   Renderable array of mysearch results.
+ */
+function mysearch_data($word, $module) {
+  if (module_hook($module, 'search_execute')) {
+    $results = module_invoke($module, 'search_execute', $word, NULL);
+    return array(
+      '#theme' => 'mysearch_results',
+      '#results' => $results,
+    );
+  }
+}
+
+
+
+/**
+ * Builds a search form.
+ *
+ * @param $word
+ *   The search word entered by the user.
+ *
+ * @return
+ *   A Form API array for the mysearch form.
+ */
+function mysearch_form($form, &$form_state, $word = '') {
+
+  $action = 'mysearch/' . $word;
+
+  $prompt = t('Enter your words for searching');
+
+  $form['#action'] = url($action);
+  // Record the $action for later use in redirecting.
+  $form_state['action'] = $action;
+  $form['#attributes']['class'][] = 'mysearch-form';
+  $form['basic'] = array('#type' => 'container', '#attributes' => array('class' => array('container-inline')));
+  $form['basic']['word'] = array(
+    '#type' => 'textfield',
+    '#title' => $prompt,
+    '#default_value' => $word,
+    '#size' => 40,
+    '#maxlength' => 255,
+  );
+  $form['basic']['submit'] = array('#type' => 'submit', '#value' => t('Search'));
+
+  return $form;
+}
+
+/**
+ * Process a mysearch form submission.
+ */
+function mysearch_form_submit($form, &$form_state) {
+  $word = $form_state['values']['word'];
+  if ($word == '') {
+    form_set_error('word', t('Please enter at least one word.'));
+  }
+
+  $form_state['redirect'] = "mysearch/".$form_state['values']['word'];
+}
+
+
+/**
+ * Theming mysearch module ALL results.
+ *
+ * This is a wrapper around theme('mysearch_result').
+ */
+function theme_mysearch_results($variables) {
+  $search_results = '';
+  
+  foreach ($variables['results'] as $result) {
+    $search_results .= theme('mysearch_result', array('result' => $result));
+  }
+  $pager = theme('pager', array('tags' => NULL));
+
+  $html = "";
+  if ($search_results) {
+    $html .= "<h2>".t('Mysearch results')."</h2>
+               <ul class='mysearch-results'>
+                 ".$search_results."
+               </ul>
+               ".$pager;
+  } else {
+    $html .= "<h2>".t('No results')."</h2>";
+  }
+  return $html;
+}
+
+
+/**
+ * Theming mysearch module SINGLE result.
+ *
+ * This theme function outputs single node result.
+ */
+function theme_mysearch_result($variables) {
+  $result = $variables['result'];
+  $url = check_url($result['link']);
+  $title = check_plain($result['title']);
+
+  $html = "
+	<li class=''>
+	  <h3 class='title'>
+		<a href=".$url.">".$title."</a>
+	  </h3>
+	</li>";
+
+  return $html;
+}

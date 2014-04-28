@@ -1,0 +1,21 @@
+#mysearch-form .form-item-word label {
+  display: block;
+}
+
+.mysearch-form {
+  margin-bottom: 1em;
+}
+.mysearch-form input {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.mysearch-results {
+  padding: 0 !important;
+  list-style: none;
+}
+.mysearch-results .title {
+  font-size: 1.2em;
+}
+.mysearch-results li {
+  margin-bottom: 1em;
+}
